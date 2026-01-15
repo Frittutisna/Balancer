@@ -14,7 +14,7 @@ FILENAMES           = {
     'OUTPUT'        : 'teams.txt'
 }
 
-NFL_NAMES = {1: "Bills",    2: "Broncos",   3: "Patriots",  4: "Texans",    5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
+NFL_NAMES = {1: "Texans",   2: "Patriots",  3: "Broncos",   4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
 NBA_NAMES = {1: "Thunder",  2: "Lakers",    3: "Spurs",     4: "Warriors",  5: "Celtics",   6: "Bulls",     7: "Heat",      8: "Knicks"}
 MLB_NAMES = {1: "Yankees",  2: "Guardians", 3: "Mariners",  4: "Astros",    5: "Phillies",  6: "Brewers",   7: "Dodgers",   8: "Pirates"}
 
