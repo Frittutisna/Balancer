@@ -84,10 +84,12 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             else                                            : total_elo += m.elo
 
         members.sort(key = lambda x: x.elo, reverse = True)
+        if MODE == 'NFL' and len(members) == 4:
+            members = [members[0], members[3], members[1], members[2]]
         
         mem_strings = []
         for m in members:
-            s = m.name
+            s = "@" + m.name
             if MODE != 'NONE' and m.name in captains_map: s += " (C)"
             mem_strings.append(s)
         
@@ -133,7 +135,21 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             f.write(f"Conference Spread: {spread2:.2f}\n")
             for t in t2_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
         else: 
-            for t in teams_data : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
+            for t in teams_data:
+                elo_str = f"{t['total_elo']:.2f}"
+                if num_teams == 2:
+                    if      t['id'] == 1: elo_str += ", Slots 1-4"
+                    elif    t['id'] == 2: elo_str += ", Slots 5-8"
+                f.write(f"{t['name']} ({elo_str}): {t['members_str']}\n")
+
+        f.write("\n[Insert Challonge link here]\n")
+        f.write("[Insert lobby link(s) here]\n")
+        
+        mode_msg = "the tour"
+        if      MODE == 'NFL': mode_msg = "NFL Mode"
+        elif    MODE == 'NBA': mode_msg = "NBA Mode"
+        elif    MODE == 'MLB': mode_msg = "MLB Mode"
+        f.write(f"Good luck and enjoy {mode_msg}!")
 
     for_mode_str = f" for {MODE} Mode" if MODE != 'NONE' else ''
     print(f"Success! Teams{for_mode_str} written to {FILENAMES['OUTPUT']}")
