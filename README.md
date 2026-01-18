@@ -13,5 +13,4 @@ but also `florenz, HakoHoka` in `blacklists.txt`).
 4. **Download** `Balancer.py`, then gather all the TXT files in the **same folder** as `Balancer.py`
 5. Change **`MODE`** to `MLB`, `NBA`, `NFL`, or `NONE` if you're just hosting a normal NGMC tour
 6. Run `Balancer.py` and check the output in `teams.txt`
-7. (Optional) Repeat Step 6 until the **Final Spread** is low enough to your liking
-8. **Copy** the output in `teams.txt` and **send** it to `#tour-information`
+7. **Copy** the output in `teams.txt` and **send** it to `#tour-information`

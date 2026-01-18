@@ -3,15 +3,15 @@ import math
 import random
 import re
 
-MODE                = 'NFL' # Options: 'MLB', 'NBA', 'NFL', 'NONE'
-SPREAD_THRESHOLD    = 1.25 if MODE != 'NONE' else 1.0
-TEAM_SIZE           = 4
-SIMULATIONS         = 1000
-FILENAMES           = {
-    'PLAYERS'       : 'players.txt',
-    'REQS'          : 'requests.txt',
-    'BL'            : 'blacklists.txt',
-    'OUTPUT'        : 'teams.txt'
+MODE        = 'NFL' # Options: 'MLB', 'NBA', 'NFL', 'NONE'
+TEAM_SIZE   = 4
+SIMULATIONS = 1000
+
+FILENAMES       = {
+    'PLAYERS'   : 'players.txt',
+    'REQS'      : 'requests.txt',
+    'BL'        : 'blacklists.txt',
+    'OUTPUT'    : 'teams.txt'
 }
 
 NFL_NAMES = {1: "Texans",   2: "Patriots",  3: "Broncos",   4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
@@ -268,7 +268,6 @@ def main():
             if spread < best_overall_spread:
                 best_overall_spread = spread
                 best_assignments = list(assignments)
-            if spread <= SPREAD_THRESHOLD: break
 
     if not best_assignments:
         print("Could not generate valid teams, check constraints")
