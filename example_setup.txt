@@ -1,4 +1,5 @@
 Mode: MLB
+Size: 4
 Challonge: https://challonge.com/mlb260130
 Lobby: https://animemusicquiz.com/invite?roomId=14835&password=100
 Names: Orioles, Yankees

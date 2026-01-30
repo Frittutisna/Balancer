@@ -10,7 +10,7 @@ Make sure this also **only** lists players from `players.txt`,
 and ensure that **no request/blacklist pairs are the same** 
 (e.g., `HakoHoka, florenz` in `requests.txt`, 
 but also `florenz, HakoHoka` in `blacklists.txt`). 
-4. (Optional) Fill in `setup.txt`. Follow the example here on how to set it up. You may omit any of these lines, and the Balancer will default to `NONE` mode (for normal tours), placeholder links, and Team [1-8] names where needed.
+4. (Optional) Fill in `setup.txt`. Follow the example here on how to set it up. You may omit any of these lines, and the Balancer will default to `NONE` mode (for normal tours), team size of 4 players, placeholder links, and Team [1-8] names where needed.
 5. **Download** `Balancer.py`, then gather all the TXT files in the **same folder** as `Balancer.py`
 6. Run `Balancer.py` and check the output in `teams.txt`
 7. **Copy** the output in `teams.txt` and **send** it to `#tour-information`

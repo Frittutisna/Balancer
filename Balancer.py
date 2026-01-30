@@ -68,6 +68,11 @@ def parse_setup():
             if val.upper() in ['NFL', 'NBA', 'MLB', 'NONE'] : config['MODE']            = val.upper()
         elif key == 'challonge'                             : config['CHALLONGE']       = val
         elif key == 'lobby'                                 : config['LOBBY']           = val
+        elif key == 'size':
+            try:
+                size_val = int(val)
+                if 2 <= size_val <= 4                       : config['TEAM_SIZE']       = size_val
+            except ValueError: pass
         elif key == 'names':
             names = [n.strip() for n in val.split(',')]
             for i, name in enumerate(names):
@@ -190,11 +195,12 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
     print(f"Success! Teams{for_mode_str} written to {FILENAMES['OUTPUT']}")
 
 def main():
-    global MODE
+    global MODE, TEAM_SIZE
     setup_config = parse_setup()
     
-    if      setup_config['MODE'] != 'NONE': MODE = setup_config['MODE']
-    elif    setup_config['MODE'] == 'NONE': MODE = 'NONE'
+    if      setup_config['MODE'] != 'NONE'  : MODE      = setup_config['MODE']
+    elif    setup_config['MODE'] == 'NONE'  : MODE      = 'NONE'
+    if      'TEAM_SIZE' in setup_config     : TEAM_SIZE = setup_config['TEAM_SIZE']
 
     all_players = parse_file(FILENAMES['PLAYERS'],  'player')
     raw_reqs    = parse_file(FILENAMES['REQS'],     'pair')
