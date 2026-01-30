@@ -1,4 +1,4 @@
-# Balancer v1.2 for Sports Modes (MLB, NBA, NFL) and NGMC Tours
+# Balancer v1.3 for Sports Modes (MLB, NBA, NFL) and NGMC Tours
 
 1. List players and their relevant **Elos** ([Watched](https://docs.google.com/spreadsheets/d/1JZvb8iIo6Nq01SkEvEPMrzd-vnlsNNVhv9QZOnaG4k4/edit?gid=1870982262#gid=1870982262), [Random](https://docs.google.com/spreadsheets/d/1JZvb8iIo6Nq01SkEvEPMrzd-vnlsNNVhv9QZOnaG4k4/edit?gid=1899407725#gid=1899407725)) in each line of `players.txt` with the format `player, Elo` (e.g., `HakoHoka, 5.897`).
 2. (Optional) List pairs of players that want to **team up** 

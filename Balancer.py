@@ -200,14 +200,14 @@ def main():
     raw_reqs    = parse_file(FILENAMES['REQS'],     'pair')
     raw_bl      = parse_file(FILENAMES['BL'],       'pair')
     
-    if len(all_players) < 8:
-        print("Error: Minimum of 8 players not met in players.txt")
+    if len(all_players) < TEAM_SIZE * 2:
+        print(f"Error: Minimum of {TEAM_SIZE} players not met in players.txt")
         return
     
     original_count  = len(all_players)
-    num_selected    = math.floor(original_count / 8) * 8
-    all_players.sort(key = lambda x: x.elo, reverse = True)
+    num_selected    = math.floor(original_count / (TEAM_SIZE * 2)) * (TEAM_SIZE * 2)
     active_players  = all_players[:num_selected]
+    active_players.sort(key = lambda x: x.elo, reverse = True)
     
     reqs        = [r for r in raw_reqs if r['p1'] and r['p2']]
     bl          = [b for b in raw_bl   if b['p1'] and b['p2']]
