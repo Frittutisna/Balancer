@@ -3,21 +3,21 @@ import math
 import random
 import re
 
-MODE        = 'MLB' # Options: 'MLB', 'NBA', 'NFL', 'NONE'
+MODE        = 'NONE'
 TEAM_SIZE   = 4
 SIMULATIONS = 1000
-CHALLONGE   = 'https://challonge.com/mlb260130'
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
     'REQS'      : 'requests.txt',
     'BL'        : 'blacklists.txt',
-    'OUTPUT'    : 'teams.txt'
+    'OUTPUT'    : 'teams.txt',
+    'SETUP'     : 'setup.txt'
 }
 
-NFL_NAMES = {1: "Rams",     2: "Seahawks",  3: "Texans",    4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
-NBA_NAMES = {1: "Lakers",   2: "Cavaliers", 3: "Pacers",    4: "Bulls",     5: "Celtics",   6: "Bulls",     7: "Heat",      8: "Knicks"}
-MLB_NAMES = {1: "Orioles",  2: "Yankees",   3: "Royals",    4: "Rangers",   5: "Phillies",  6: "Brewers",   7: "Dodgers",   8: "Pirates"}
+NFL_NAMES = {1: "Texans",   2: "Patriots",  3: "Broncos",   4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
+NBA_NAMES = {1: "Thunder",  2: "Lakers",    3: "Spurs",     4: "Warriors",  5: "Celtics",   6: "Bulls",     7: "Heat",      8: "Knicks"}
+MLB_NAMES = {1: "Yankees",  2: "Guardians", 3: "Mariners",  4: "Astros",    5: "Phillies",  6: "Brewers",   7: "Dodgers",   8: "Pirates"}
 
 class Player:
     def __init__(self, name, elo, original_idx = 0):
@@ -45,6 +45,36 @@ def parse_file(filename, file_type):
     
     return data
 
+def parse_setup():
+    config          = {
+        'MODE'      : 'NONE',
+        'CHALLONGE' : '[Insert Challonge link here]',
+        'LOBBY'     : '[Insert lobby link(s) here]',
+        'NAMES'     : {}
+    }
+    
+    if not os.path.exists(FILENAMES['SETUP']): return config
+    with open(FILENAMES['SETUP'], 'r', encoding='utf-8') as f: lines = f.readlines()
+        
+    for line in lines:
+        line = line.strip()
+        if not line or ':' not in line: continue
+        
+        key, val    = line.split(':', 1)
+        key         = key.strip().lower()
+        val         = val.strip()
+        
+        if key == 'mode':
+            if val.upper() in ['NFL', 'NBA', 'MLB', 'NONE'] : config['MODE']            = val.upper()
+        elif key == 'challonge'                             : config['CHALLONGE']       = val
+        elif key == 'lobby'                                 : config['LOBBY']           = val
+        elif key == 'names':
+            names = [n.strip() for n in val.split(',')]
+            for i, name in enumerate(names):
+                if name                                     : config['NAMES'][i + 1]    = name
+                    
+    return config
+
 def get_stats_block(teams_data):
     if not teams_data: return 0.0, 0.0
     scores  = [t['total_elo'] for t in teams_data]
@@ -52,7 +82,7 @@ def get_stats_block(teams_data):
     spread  = max(scores) - min(scores)
     return avg_elo, spread
 
-def write_output(num_selected, original_count, num_teams, active_players, final_assignments, reqs, bl):
+def write_output(num_selected, original_count, num_teams, active_players, final_assignments, reqs, bl, setup_config):
     verified_reqs = 0
     for r in reqs:
         p1 = next((p for p in active_players if p.name == r['p1']), None)
@@ -73,7 +103,9 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
 
     captains_map = {active_players[i].name: True for i in range(num_teams)}
 
-    teams_data = []
+    teams_data      = []
+    custom_names    = setup_config['NAMES']
+
     for t_idx in range(1, num_teams + 1):
         members = []
         for i, p in enumerate(active_players):
@@ -94,10 +126,12 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             if MODE != 'NONE' and m.name in captains_map: s += " (C)"
             mem_strings.append(s)
         
-        if      MODE == 'NFL'   : team_name = NFL_NAMES.get(t_idx, f"Team {t_idx}")
-        elif    MODE == 'NBA'   : team_name = NBA_NAMES.get(t_idx, f"Team {t_idx}")
-        elif    MODE == 'MLB'   : team_name = MLB_NAMES.get(t_idx, f"Team {t_idx}")
-        else                    : team_name = f"Team {t_idx}"
+        team_name = custom_names.get(t_idx)
+        if not team_name:
+            if      MODE == 'NFL'   : team_name = NFL_NAMES.get(t_idx, f"Team {t_idx}")
+            elif    MODE == 'NBA'   : team_name = NBA_NAMES.get(t_idx, f"Team {t_idx}")
+            elif    MODE == 'MLB'   : team_name = MLB_NAMES.get(t_idx, f"Team {t_idx}")
+            else                    : team_name = f"Team {t_idx}"
         
         teams_data.append({
             'id'            : t_idx,
@@ -143,8 +177,8 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
                     elif    t['id'] == 2: elo_str += ", Slots 5-8"
                 f.write(f"{t['name']} ({elo_str}): {t['members_str']}\n")
 
-        f.write(f"\n{CHALLONGE}\n")
-        f.write("[Insert lobby link(s) here]\n")
+        f.write(f"\n{setup_config['CHALLONGE']}\n")
+        f.write(f"{setup_config['LOBBY']}\n")
         
         mode_msg = "the tour"
         if      MODE == 'NFL': mode_msg = "NFL Mode"
@@ -152,12 +186,16 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
         elif    MODE == 'MLB': mode_msg = "MLB Mode"
         f.write(f"Good luck and enjoy {mode_msg}!")
 
-        if MODE != 'NONE': f.write(f"\nFeel free to watch {mode_msg} too to get yourself used to it!")
-
     for_mode_str = f" for {MODE} Mode" if MODE != 'NONE' else ''
     print(f"Success! Teams{for_mode_str} written to {FILENAMES['OUTPUT']}")
 
 def main():
+    global MODE
+    setup_config = parse_setup()
+    
+    if      setup_config['MODE'] != 'NONE': MODE = setup_config['MODE']
+    elif    setup_config['MODE'] == 'NONE': MODE = 'NONE'
+
     all_players = parse_file(FILENAMES['PLAYERS'],  'player')
     raw_reqs    = parse_file(FILENAMES['REQS'],     'pair')
     raw_bl      = parse_file(FILENAMES['BL'],       'pair')
@@ -276,6 +314,6 @@ def main():
         print("Could not generate valid teams, check constraints")
         return
     
-    write_output(num_selected, original_count, num_teams, active_players, best_assignments, reqs, bl)
+    write_output(num_selected, original_count, num_teams, active_players, best_assignments, reqs, bl, setup_config)
 
 if __name__ == "__main__": main()
