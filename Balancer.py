@@ -3,9 +3,10 @@ import math
 import random
 import re
 
-MODE        = 'NFL' # Options: 'MLB', 'NBA', 'NFL', 'NONE'
+MODE        = 'MLB' # Options: 'MLB', 'NBA', 'NFL', 'NONE'
 TEAM_SIZE   = 4
 SIMULATIONS = 1000
+CHALLONGE   = 'https://challonge.com/mlb260130'
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
@@ -14,9 +15,9 @@ FILENAMES       = {
     'OUTPUT'    : 'teams.txt'
 }
 
-NFL_NAMES = {1: "Texans",   2: "Patriots",  3: "Broncos",   4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
-NBA_NAMES = {1: "Thunder",  2: "Lakers",    3: "Spurs",     4: "Warriors",  5: "Celtics",   6: "Bulls",     7: "Heat",      8: "Knicks"}
-MLB_NAMES = {1: "Yankees",  2: "Guardians", 3: "Mariners",  4: "Astros",    5: "Phillies",  6: "Brewers",   7: "Dodgers",   8: "Pirates"}
+NFL_NAMES = {1: "Rams",     2: "Seahawks",  3: "Texans",    4: "Bills",     5: "Panthers",  6: "Rams",      7: "Eagles",    8: "Niners"}
+NBA_NAMES = {1: "Lakers",   2: "Cavaliers", 3: "Pacers",    4: "Bulls",     5: "Celtics",   6: "Bulls",     7: "Heat",      8: "Knicks"}
+MLB_NAMES = {1: "Orioles",  2: "Yankees",   3: "Royals",    4: "Rangers",   5: "Phillies",  6: "Brewers",   7: "Dodgers",   8: "Pirates"}
 
 class Player:
     def __init__(self, name, elo, original_idx = 0):
@@ -112,7 +113,7 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
         f.write(f"Balanced {num_selected} out of {original_count} players into {num_teams} teams\n")
         f.write(f"Fulfilled {verified_reqs} out of {len(reqs)} request(s)\n")
         f.write(f"Fulfilled {verified_bl} out of {len(bl)} blacklist(s)\n")
-        f.write(f"Average Elo: {avg_elo:.2f}\n")
+        f.write(f"Average Total Elo: {avg_elo:.2f}\n")
         f.write(f"Final Spread: {spread:.2f}\n\n")
 
         if num_teams == 8 and MODE != 'NONE':
@@ -125,13 +126,13 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             
             f.write(f"{conf1_name}:\n")
             avg1, spread1 = get_stats_block(t1_slice)
-            f.write(f"Average Elo: {avg1:.2f}\n")
+            f.write(f"Average Total Elo: {avg1:.2f}\n")
             f.write(f"Conference Spread: {spread1:.2f}\n")
             for t in t1_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
             
             f.write(f"\n{conf2_name}:\n")
             avg2, spread2 = get_stats_block(t2_slice)
-            f.write(f"Average Elo: {avg2:.2f}\n")
+            f.write(f"Average Total Elo: {avg2:.2f}\n")
             f.write(f"Conference Spread: {spread2:.2f}\n")
             for t in t2_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
         else: 
@@ -142,7 +143,7 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
                     elif    t['id'] == 2: elo_str += ", Slots 5-8"
                 f.write(f"{t['name']} ({elo_str}): {t['members_str']}\n")
 
-        f.write("\n[Insert Challonge link here]\n")
+        f.write(f"\n{CHALLONGE}\n")
         f.write("[Insert lobby link(s) here]\n")
         
         mode_msg = "the tour"
@@ -150,6 +151,8 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
         elif    MODE == 'NBA': mode_msg = "NBA Mode"
         elif    MODE == 'MLB': mode_msg = "MLB Mode"
         f.write(f"Good luck and enjoy {mode_msg}!")
+
+        if MODE != 'NONE': f.write(f"\nFeel free to watch {mode_msg} too to get yourself used to it!")
 
     for_mode_str = f" for {MODE} Mode" if MODE != 'NONE' else ''
     print(f"Success! Teams{for_mode_str} written to {FILENAMES['OUTPUT']}")
