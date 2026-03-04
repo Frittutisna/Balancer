@@ -5,7 +5,7 @@ import re
 
 MODE        = 'NONE'
 TEAM_SIZE   = 4
-SIMULATIONS = 1000
+SIMULATIONS = 10000
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
