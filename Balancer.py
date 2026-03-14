@@ -5,7 +5,8 @@ import re
 
 MODE        = 'NONE'
 TEAM_SIZE   = 4
-SIMULATIONS = 10
+SIMULATIONS = 100
+THRESHOLD   = 0.05
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
@@ -128,7 +129,7 @@ def write_output(num_teams, active_players, final_assignments, setup_config):
 def main():
     global MODE, TEAM_SIZE
     setup_config = parse_setup()
-    
+
     if      setup_config['MODE'] != 'NONE'  : MODE      = setup_config['MODE']
     elif    setup_config['MODE'] == 'NONE'  : MODE      = 'NONE'
     if      'TEAM_SIZE' in setup_config     : TEAM_SIZE = setup_config['TEAM_SIZE']
@@ -136,107 +137,128 @@ def main():
     all_players = parse_file(FILENAMES['PLAYERS'],  'player')
     raw_reqs    = parse_file(FILENAMES['REQS'],     'pair')
     raw_bl      = parse_file(FILENAMES['BL'],       'pair')
-    
+
     if len(all_players) < TEAM_SIZE * 2: return
-    
+
     original_count  = len(all_players)
     num_selected    = math.floor(original_count / (TEAM_SIZE * 2)) * (TEAM_SIZE * 2)
     active_players  = all_players[:num_selected]
     active_players.sort(key = lambda x: x.elo, reverse = True)
-    
+
     num_teams       = int(num_selected / TEAM_SIZE)
     captains_map    = {active_players[i].name: True for i in range(num_teams)}
-    
-    best_overall_spread = float('inf')
-    best_assignments    = None
 
-    print(f"Running optimized balancing over {SIMULATIONS} iterations")
+    current_reqs            = list(raw_reqs)
+    final_best_assignments  = None
+    final_best_spread       = float('inf')
 
-    for _ in range(SIMULATIONS):
-        assignments = [0] * num_selected
-        team_counts = [0] * num_teams
-        
-        cap_indices = list(range(num_teams))
-        random.shuffle(cap_indices)
-        for i, t_idx in enumerate(cap_indices):
-            assignments[i]      = t_idx + 1
-            team_counts[t_idx]  = 1
+    while True:
+        iteration_best_spread       = float('inf')
+        iteration_best_assignments  = None
+
+        print(f"Running optimized balancing over {SIMULATIONS} iterations with {len(current_reqs)} request(s)")
+
+        for _ in range(SIMULATIONS):
+            assignments = [0] * num_selected
+            team_counts = [0] * num_teams
             
-        pool = list(range(num_teams, num_selected))
-        random.shuffle(pool)
-        for i, p_idx in enumerate(pool):
-            t_idx               =   i % num_teams
-            assignments[p_idx]  =   t_idx + 1
-            team_counts[t_idx]  +=  1
+            cap_indices = list(range(num_teams))
+            random.shuffle(cap_indices)
+            for i, t_idx in enumerate(cap_indices):
+                assignments[i]      = t_idx + 1
+                team_counts[t_idx]  = 1
+                
+            pool = list(range(num_teams, num_selected))
+            random.shuffle(pool)
+            for i, p_idx in enumerate(pool):
+                t_idx               =   i % num_teams
+                assignments[p_idx]  =   t_idx + 1
+                team_counts[t_idx]  +=  1
 
-        improved = True
-        while improved:
-            improved = False
-            for i in range(num_teams, num_selected):
-                for j in range(i + 1, num_selected):
-                    t1_idx = assignments[i] - 1
-                    t2_idx = assignments[j] - 1
-                    if t1_idx == t2_idx: continue
+            improved = True
+            while improved:
+                improved = False
+                for i in range(num_teams, num_selected):
+                    for j in range(i + 1, num_selected):
+                        t1_idx = assignments[i] - 1
+                        t2_idx = assignments[j] - 1
+                        if t1_idx == t2_idx: continue
 
-                    t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
-                    t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
+                        t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
+                        t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
 
-                    def has_violation(mems, _):
-                        names = [m.name for m in mems]
-                        for r in raw_reqs:
-                            if (r['p1'] in names and r['p2'] not in names) or (r['p2'] in names and r['p1'] not in names):
-                                if any(p.name == (r['p2'] if r['p1'] in names else r['p1']) for p in active_players): return True
-                        for b in raw_bl:
-                            if b['p1'] in names and b['p2'] in names: return True
-                        return False
+                        def has_violation(mems, _):
+                            names = [m.name for m in mems]
+                            for r in current_reqs:
+                                if (r['p1'] in names and r['p2'] not in names) or (r['p2'] in names and r['p1'] not in names):
+                                    if any(p.name == (r['p2'] if r['p1'] in names else r['p1']) for p in active_players): return True
+                            for b in raw_bl:
+                                if b['p1'] in names and b['p2'] in names: return True
+                            return False
 
-                    curr_violation = has_violation(t1_m, t1_idx) or has_violation(t2_m, t2_idx)
+                        curr_violation = has_violation(t1_m, t1_idx) or has_violation(t2_m, t2_idx)
 
-                    all_elos = []
-                    for t in range(1, num_teams + 1):
-                        mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
-                        all_elos.append(get_team_elo(mems, MODE, captains_map))
-                    curr_spread = max(all_elos) - min(all_elos)
+                        all_elos = []
+                        for t in range(1, num_teams + 1):
+                            mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+                            all_elos.append(get_team_elo(mems, MODE, captains_map))
+                        curr_spread = max(all_elos) - min(all_elos)
 
-                    assignments[i] = t2_idx + 1
-                    assignments[j] = t1_idx + 1
+                        assignments[i] = t2_idx + 1
+                        assignments[j] = t1_idx + 1
 
-                    new_t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
-                    new_t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
+                        new_t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
+                        new_t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
 
-                    new_violation = has_violation(new_t1_m, t1_idx) or has_violation(new_t2_m, t2_idx)
-                    
-                    new_elos = []
-                    for t in range(1, num_teams + 1):
-                        mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
-                        new_elos.append(get_team_elo(mems, MODE, captains_map))
-                    new_spread = max(new_elos) - min(new_elos)
+                        new_violation = has_violation(new_t1_m, t1_idx) or has_violation(new_t2_m, t2_idx)
+                        
+                        new_elos = []
+                        for t in range(1, num_teams + 1):
+                            mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+                            new_elos.append(get_team_elo(mems, MODE, captains_map))
+                        new_spread = max(new_elos) - min(new_elos)
 
-                    if (
-                        (curr_violation and not new_violation) or 
-                        (not new_violation and not curr_violation and new_spread < curr_spread)
-                    ): improved = True
+                        if (
+                            (curr_violation and not new_violation) or 
+                            (not new_violation and not curr_violation and new_spread < curr_spread)
+                        ): improved = True
+                        else:
+                            assignments[i] = t1_idx + 1 
+                            assignments[j] = t2_idx + 1
 
-                    else:
-                        assignments[i] = t1_idx + 1 
-                        assignments[j] = t2_idx + 1
+            final_elos  = []
+            valid       = True
+            for t in range(1, num_teams + 1):
+                mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+                if has_violation(mems, t): valid = False
+                final_elos.append(get_team_elo(mems, MODE, captains_map))
+            
+            if valid:
+                spread = max(final_elos) - min(final_elos)
+                if spread < iteration_best_spread:
+                    iteration_best_spread       = spread
+                    iteration_best_assignments  = list(assignments)
 
-        final_elos  = []
-        valid       = True
+        if iteration_best_assignments:
+            team_elos = []
+            for t in range(1, num_teams + 1):
+                mems = [active_players[k] for k in range(num_selected) if iteration_best_assignments[k] == t]
+                team_elos.append(get_team_elo(mems, MODE, captains_map))
+            
+            avg_elo         = sum(team_elos) / len(team_elos)
+            current_ratio   = iteration_best_spread / avg_elo
 
-        for t in range(1, num_teams + 1):
-            mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
-            if has_violation(mems, t): valid = False
-            final_elos.append(get_team_elo(mems, MODE, captains_map))
-        
-        if valid:
-            spread = max(final_elos) - min(final_elos)
-            if spread < best_overall_spread:
-                best_overall_spread = spread
-                best_assignments    = list(assignments)
+            if current_ratio <= THRESHOLD or not current_reqs:
+                final_best_assignments  = iteration_best_assignments
+                final_best_spread       = iteration_best_spread
+                break
+            else:
+                dropped = current_reqs.pop()
+                print(f"Ratio ({current_ratio:.4f}) > Threshold ({THRESHOLD}), dropping: {dropped}")
+        else: break
 
-    if best_assignments:
-        write_output(num_teams, active_players, best_assignments, setup_config)
-        print(f"Final Spread: {best_overall_spread:.3f}")
+    if final_best_assignments:
+        write_output(num_teams, active_players, final_best_assignments, setup_config)
+        print(f"Final Spread: {final_best_spread:.3f}")
 
 if __name__ == "__main__": main()

@@ -1,11 +1,11 @@
-Thunder (66.411): Renzou (14.992) ruuka (12.641) Ephemeral (12.528) miiarad (11.258)
-Lakers (66.523): Kazaseno (14.727) Kryuell (12.950) liljakatsuragi (12.938) Spitzell (11.181)
-Spurs (66.409): ShiinaMahiru (14.793) Pile (12.974) accelerator11 (12.630) Isekaijoucho (11.219)
-Warriors (68.936): Zippy (19.027) florenz (11.198) Seguri (10.899) Raku51 (8.785)
-Celtics (69.129): PoolNoodle (19.356) MD22 (10.905) Bommie (10.828) thjalago (8.684)
-Bulls (66.423): Nephirea (14.820) Komari (12.957) HaruUrara (12.593) AnnaYanami (11.233)
-Heat (68.197): YuriMeguri (18.710) ss_r_white_pony (11.123) Konsumenci (10.921) Spartric (8.733)
-Knicks (68.359): FORTNAYT (18.675) Janoxx (11.161) Vigard (11.156) inta (8.692)
+Thunder (66.530): Kazaseno (14.727) Komari (12.957) liljakatsuragi (12.938) Spitzell (11.181)
+Lakers (66.411): Renzou (14.992) ruuka (12.641) Ephemeral (12.528) miiarad (11.258)
+Spurs (69.118): Zippy (19.027) Vigard (11.156) ss_r_white_pony (11.123) Raku51 (8.785)
+Warriors (66.416): Nephirea (14.820) Kryuell (12.950) HaruUrara (12.593) AnnaYanami (11.233)
+Celtics (66.409): ShiinaMahiru (14.793) Pile (12.974) accelerator11 (12.630) Isekaijoucho (11.219)
+Bulls (68.124): FORTNAYT (18.675) Janoxx (11.161) Konsumenci (10.921) inta (8.692)
+Heat (68.250): YuriMeguri (18.710) florenz (11.198) Seguri (10.899) Spartric (8.733)
+Knicks (69.129): PoolNoodle (19.356) MD22 (10.905) Bommie (10.828) thjalago (8.684)
 
 Average: 67.548
 
