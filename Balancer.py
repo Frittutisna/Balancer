@@ -115,20 +115,16 @@ def write_output(num_teams, active_players, final_assignments, setup_config):
             elif    MODE == 'MLB'   : team_name = MLB_NAMES.get(t_idx, f"Team {t_idx}")
             else                    : team_name = f"Team {t_idx}"
         
-        teams_data.append({
-            'id'            : t_idx,
-            'name'          : team_name,
-            'total_elo'     : total_elo,
-            'code_str'      : " ".join(code_mem_strings)
-        })
+        if MODE == 'NONE'   : final_line = " ".join(code_mem_strings)
+        else                : final_line = f"{team_name} ({total_elo:.3f}): " + " ".join(code_mem_strings)
+        teams_data.append({'total_elo': total_elo, 'final_str': final_line})
 
     avg_elo = get_stats_block(teams_data)
 
     with open(FILENAMES['CODES'], 'w', encoding = 'utf-8') as f:
-        teams_data.sort(key = lambda x: x['total_elo'], reverse = True)
-        for t in teams_data: f.write(f"{t['name']} ({t['total_elo']:.3f}): {t['code_str']}\n")
+        for t in teams_data: f.write(f"{t['final_str']}\n")
         f.write(f"\nAverage: {avg_elo:.3f}\n\n")
-        f.write(f"{setup_config['CHALLONGE']}\n")
+        f.write(f"{setup_config['CHALLONGE']}")
 
     print(f"Success! Codes written to {FILENAMES['CODES']}")
 
@@ -250,14 +246,21 @@ def main():
                     break
 
         if possible:
-            spread      = max(teams) - min(teams)
-            conf1_avg   = sum(teams[0 : 4]) / 4
-            conf2_avg   = sum(teams[4 : 8]) / 4
-            conf_spread = abs(conf1_avg - conf2_avg)
-            if spread < best_spread and conf_spread < best_conf_spread: 
-                best_spread         = spread
-                best_conf_spread    = conf_spread
-                best_assignments    = list(assignments)
+            spread = max(teams) - min(teams)
+
+            if len(teams) == 8:
+                conf1_avg   = sum(teams[0 : 4]) / 4
+                conf2_avg   = sum(teams[4 : 8]) / 4
+                conf_spread = abs(conf1_avg - conf2_avg)
+
+                if spread < best_spread and conf_spread < best_conf_spread:
+                    best_spread         = spread
+                    best_conf_spread    = conf_spread
+                    best_assignments    = list(assignments)
+
+            elif spread < best_spread:
+                best_spread             = spread
+                best_assignments        = list(assignments)
 
     if not best_assignments:
         print("Could not generate valid teams, check constraints")
