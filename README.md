@@ -7,7 +7,7 @@ Make sure this **only** lists players from `players.txt`.
 3. (Optional) List pairs of players that **don't want to team up** 
 in each line of `blacklists.txt` (e.g., `chommy, FeyFey`).
 Make sure this also **only** lists players from `players.txt`, 
-and ensure that **no request/blacklist pairs are the same** 
+and ensure that **no request nor blacklist pairs are the same** 
 (e.g., `HakoHoka, florenz` in `requests.txt`, 
 but also `florenz, HakoHoka` in `blacklists.txt`). 
 4. (Optional) Fill in `setup.txt`. Follow the example here on how to set it up. You may omit any of these lines, and the Balancer will default to `NONE` mode (for normal tours), team size of 4 players, placeholder links, and Team [1-8] names where needed.
