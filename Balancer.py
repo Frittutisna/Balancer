@@ -5,7 +5,7 @@ import re
 
 MODE        = 'NONE'
 TEAM_SIZE   = 4
-SIMULATIONS = 10000
+SIMULATIONS = 10
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
@@ -80,34 +80,31 @@ def parse_setup():
                     
     return config
 
+def get_team_elo(members, mode, captains_map):
+    total = 0.0
+    for m in members:
+        if mode != 'NONE' and m.name in captains_map    : total += (m.elo * 2)
+        else                                            : total += m.elo
+    return total
+
 def get_stats_block(teams_data):
-    if not teams_data: return 0.0, 0.0
+    if not teams_data: return 0.0
     scores  = [t['total_elo'] for t in teams_data]
     avg_elo = sum(scores) / len(scores)
     return avg_elo
 
 def write_output(num_teams, active_players, final_assignments, setup_config):
-    captains_map = {active_players[i].name: True for i in range(num_teams)}
-
+    captains_map    = {active_players[i].name: True for i in range(num_teams)}
     teams_data      = []
     custom_names    = setup_config['NAMES']
 
     for t_idx in range(1, num_teams + 1):
-        members = []
-        for i, p in enumerate(active_players):
-            if final_assignments[i] == t_idx: members.append(p)
-        
-        total_elo = 0.0
-        for m in members:
-            if MODE != 'NONE' and m.name in captains_map    : total_elo += (m.elo * 2)
-            else                                            : total_elo += m.elo
+        members     = [p for i, p in enumerate(active_players) if final_assignments[i] == t_idx]
+        total_elo   = get_team_elo(members, MODE, captains_map)
 
         members.sort(key = lambda x: x.elo, reverse = True)
         if MODE == 'NFL' and len(members) == 4: members = [members[0], members[3], members[1], members[2]]
-        
-        code_mem_strings = []
-        for m in members: code_mem_strings.append(f"{m.name} ({m.elo:.3f})")
-        
+        code_mem_strings = [f"{m.name} ({m.elo:.3f})" for m in members]
         team_name = custom_names.get(t_idx)
         if not team_name:
             if      MODE == 'NFL'   : team_name = NFL_NAMES.get(t_idx, f"Team {t_idx}")
@@ -126,7 +123,7 @@ def write_output(num_teams, active_players, final_assignments, setup_config):
         f.write(f"\nAverage: {avg_elo:.3f}\n\n")
         f.write(f"{setup_config['CHALLONGE']}")
 
-    print(f"Success! Codes written to {FILENAMES['CODES']}")
+    print(f"Codes written to {FILENAMES['CODES']}")
 
 def main():
     global MODE, TEAM_SIZE
@@ -140,132 +137,106 @@ def main():
     raw_reqs    = parse_file(FILENAMES['REQS'],     'pair')
     raw_bl      = parse_file(FILENAMES['BL'],       'pair')
     
-    if len(all_players) < TEAM_SIZE * 2:
-        print(f"Error: Minimum of {TEAM_SIZE} players not met in players.txt")
-        return
+    if len(all_players) < TEAM_SIZE * 2: return
     
     original_count  = len(all_players)
     num_selected    = math.floor(original_count / (TEAM_SIZE * 2)) * (TEAM_SIZE * 2)
     active_players  = all_players[:num_selected]
     active_players.sort(key = lambda x: x.elo, reverse = True)
     
-    reqs        = [r for r in raw_reqs if r['p1'] and r['p2']]
-    bl          = [b for b in raw_bl   if b['p1'] and b['p2']]
-    num_teams   = int(num_selected / TEAM_SIZE)
+    num_teams       = int(num_selected / TEAM_SIZE)
+    captains_map    = {active_players[i].name: True for i in range(num_teams)}
     
-    best_spread     = float('inf')
-    best_conf_spread  = float('inf')
-    best_assignments        = None
+    best_overall_spread = float('inf')
+    best_assignments    = None
 
-    print(f"Running {SIMULATIONS} simulations to find the best balance")
+    print(f"Running optimized balancing over {SIMULATIONS} iterations")
 
     for _ in range(SIMULATIONS):
-        possible            = True
-        assignments         = [0]   * num_selected
-        teams               = [0.0] * num_teams
-        team_counts         = [0]   * num_teams
-        captain_assignments = list(range(num_teams))
-        random.shuffle(captain_assignments)
-
-        for i in range(num_teams):
-            t_idx               = captain_assignments[i]
+        assignments = [0] * num_selected
+        team_counts = [0] * num_teams
+        
+        cap_indices = list(range(num_teams))
+        random.shuffle(cap_indices)
+        for i, t_idx in enumerate(cap_indices):
             assignments[i]      = t_idx + 1
-            teams[t_idx]        = active_players[i].elo * 2 if MODE != 'NONE' else active_players[i].elo
             team_counts[t_idx]  = 1
+            
+        pool = list(range(num_teams, num_selected))
+        random.shuffle(pool)
+        for i, p_idx in enumerate(pool):
+            t_idx               =   i % num_teams
+            assignments[p_idx]  =   t_idx + 1
+            team_counts[t_idx]  +=  1
 
-        player_pool = list(range(num_teams, num_selected))
-        random.shuffle(player_pool)
+        improved = True
+        while improved:
+            improved = False
+            for i in range(num_teams, num_selected):
+                for j in range(i + 1, num_selected):
+                    t1_idx = assignments[i] - 1
+                    t2_idx = assignments[j] - 1
+                    if t1_idx == t2_idx: continue
 
-        for p in player_pool:
-            if assignments[p] == 0:
-                target_team     = -1
-                min_elo         = float('inf') 
-                partners_needed = 0
-                forced_team     = -1
-                conflict        = False
-                my_name         = active_players[p].name
-                
-                for r in reqs:
-                    p_name = ""
-                    if r['p1'] == my_name: p_name = r['p2']
-                    if r['p2'] == my_name: p_name = r['p1']
-                    if p_name:
-                        p_idx_l = next((i for i, pl in enumerate(active_players) if pl.name == p_name), -1)
-                        if p_idx_l > -1:
-                            if assignments[p_idx_l] > 0:
-                                if      forced_team == -1                   : forced_team       =   assignments[p_idx_l]
-                                elif    forced_team != assignments[p_idx_l] : conflict          =   True
-                            else                                            : partners_needed   +=  1
-                if conflict:
-                    possible = False
-                    break
-                
-                search_order = list(range(num_teams))
-                random.shuffle(search_order)
+                    t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
+                    t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
 
-                for t in search_order:
-                    if forced_team != -1 and (t + 1) != forced_team: continue
+                    def has_violation(mems, _):
+                        names = [m.name for m in mems]
+                        for r in raw_reqs:
+                            if (r['p1'] in names and r['p2'] not in names) or (r['p2'] in names and r['p1'] not in names):
+                                if any(p.name == (r['p2'] if r['p1'] in names else r['p1']) for p in active_players): return True
+                        for b in raw_bl:
+                            if b['p1'] in names and b['p2'] in names: return True
+                        return False
+
+                    curr_violation = has_violation(t1_m, t1_idx) or has_violation(t2_m, t2_idx)
+
+                    all_elos = []
+                    for t in range(1, num_teams + 1):
+                        mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+                        all_elos.append(get_team_elo(mems, MODE, captains_map))
+                    curr_spread = max(all_elos) - min(all_elos)
+
+                    assignments[i] = t2_idx + 1
+                    assignments[j] = t1_idx + 1
+
+                    new_t1_m = [active_players[k] for k in range(num_selected) if assignments[k] == t1_idx + 1]
+                    new_t2_m = [active_players[k] for k in range(num_selected) if assignments[k] == t2_idx + 1]
+
+                    new_violation = has_violation(new_t1_m, t1_idx) or has_violation(new_t2_m, t2_idx)
                     
-                    if team_counts[t] + partners_needed < TEAM_SIZE:
-                        is_compatible = True
-                        for mem in range(num_selected):
-                            if assignments[mem] == (t + 1):
-                                m_name = active_players[mem].name
-                                for b in bl:
-                                    if ((b['p1'] == m_name and b['p2'] == my_name) or 
-                                        (b['p2'] == m_name and b['p1'] == my_name)):
-                                        is_compatible = False
-                                        break
-                            if not is_compatible: break
-                        
-                        if is_compatible:
-                            if forced_team > -1: 
-                                target_team = t
-                                break
-                            elif teams[t] < min_elo:
-                                min_elo     = teams[t]
-                                target_team = t
-                
-                if target_team != -1:
-                    assignments[p]              =   target_team + 1
-                    teams[target_team]          +=  active_players[p].elo
-                    team_counts[target_team]    +=  1
-                    curr_name                   = active_players[p].name
-                    for r in reqs:
-                        p_part = ""
-                        if r['p1'] == curr_name: p_part = r['p2']
-                        if r['p2'] == curr_name: p_part = r['p1']
-                        if p_part:
-                            pp_idx = next((i for i, pl in enumerate(active_players) if pl.name == p_part), -1)
-                            if pp_idx > -1 and assignments[pp_idx] == 0:
-                                assignments[pp_idx] = target_team + 1
-                                teams[target_team] += active_players[pp_idx].elo
-                                team_counts[target_team] += 1
-                else:
-                    possible = False
-                    break
+                    new_elos = []
+                    for t in range(1, num_teams + 1):
+                        mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+                        new_elos.append(get_team_elo(mems, MODE, captains_map))
+                    new_spread = max(new_elos) - min(new_elos)
 
-        if possible:
-            spread = max(teams) - min(teams)
+                    if (
+                        (curr_violation and not new_violation) or 
+                        (not new_violation and not curr_violation and new_spread < curr_spread)
+                    ): improved = True
 
-            if len(teams) == 8:
-                conf1_avg   = sum(teams[0 : 4]) / 4
-                conf2_avg   = sum(teams[4 : 8]) / 4
-                conf_spread = abs(conf1_avg - conf2_avg)
+                    else:
+                        assignments[i] = t1_idx + 1 
+                        assignments[j] = t2_idx + 1
 
-                if spread < best_spread and conf_spread < best_conf_spread:
-                    best_spread         = spread
-                    best_conf_spread    = conf_spread
-                    best_assignments    = list(assignments)
+        final_elos  = []
+        valid       = True
 
-            elif spread < best_spread:
-                best_spread             = spread
-                best_assignments        = list(assignments)
+        for t in range(1, num_teams + 1):
+            mems = [active_players[k] for k in range(num_selected) if assignments[k] == t]
+            if has_violation(mems, t): valid = False
+            final_elos.append(get_team_elo(mems, MODE, captains_map))
+        
+        if valid:
+            spread = max(final_elos) - min(final_elos)
+            if spread < best_overall_spread:
+                best_overall_spread = spread
+                best_assignments    = list(assignments)
 
-    if not best_assignments:
-        print("Could not generate valid teams, check constraints")
-        return
-    
-    write_output(num_teams, active_players, best_assignments, setup_config)
+    if best_assignments:
+        write_output(num_teams, active_players, best_assignments, setup_config)
+        print(f"Final Spread: {best_overall_spread:.3f}")
 
 if __name__ == "__main__": main()
