@@ -5,7 +5,7 @@ import re
 
 MODE        = 'NONE'
 TEAM_SIZE   = 4
-SIMULATIONS = 1000
+SIMULATIONS = 10000
 
 FILENAMES       = {
     'PLAYERS'   : 'players.txt',
@@ -160,9 +160,12 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             elif    MODE == 'NBA'   : conf1_name, conf2_name = "Western",   "Eastern"
             else                    : conf1_name, conf2_name = "AL",        "NL"
 
-            t1_slice    = teams_data[0:4]
-            t2_slice    = teams_data[4:8]
+            t1_slice = teams_data[0 : 4]
+            t2_slice = teams_data[4 : 8]
             
+            t1_slice.sort(key = lambda x: x['total_elo'], reverse = True)
+            t2_slice.sort(key = lambda x: x['total_elo'], reverse = True)
+
             f.write(f"{conf1_name}:\n")
             avg1, spread1 = get_stats_block(t1_slice)
             f.write(f"Average Total Elo: {avg1:.2f}\n")
@@ -175,6 +178,7 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             f.write(f"Conference Spread: {spread2:.2f}\n")
             for t in t2_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
         else: 
+            teams_data.sort(key = lambda x: x['total_elo'], reverse = True)
             for t in teams_data:
                 elo_str = f"{t['total_elo']:.2f}"
                 if num_teams == 2:
@@ -219,12 +223,13 @@ def main():
     bl          = [b for b in raw_bl   if b['p1'] and b['p2']]
     num_teams   = int(num_selected / TEAM_SIZE)
     
-    best_overall_spread = float('inf')
-    best_assignments    = None
+    best_spread     = float('inf')
+    best_conf_spread  = float('inf')
+    best_assignments        = None
 
     print(f"Running {SIMULATIONS} simulations to find the best balance")
 
-    for sim in range(SIMULATIONS):
+    for _ in range(SIMULATIONS):
         possible            = True
         assignments         = [0]   * num_selected
         teams               = [0.0] * num_teams
@@ -311,10 +316,14 @@ def main():
                     break
 
         if possible:
-            spread = max(teams) - min(teams)
-            if spread < best_overall_spread:
-                best_overall_spread = spread
-                best_assignments = list(assignments)
+            spread      = max(teams) - min(teams)
+            conf1_avg   = sum(teams[0 : 4]) / 4
+            conf2_avg   = sum(teams[4 : 8]) / 4
+            conf_spread = abs(conf1_avg - conf2_avg)
+            if spread < best_spread and conf_spread < best_conf_spread: 
+                best_spread         = spread
+                best_conf_spread    = conf_spread
+                best_assignments    = list(assignments)
 
     if not best_assignments:
         print("Could not generate valid teams, check constraints")
