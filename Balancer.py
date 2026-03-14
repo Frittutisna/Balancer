@@ -12,6 +12,7 @@ FILENAMES       = {
     'REQS'      : 'requests.txt',
     'BL'        : 'blacklists.txt',
     'OUTPUT'    : 'teams.txt',
+    'CODES'     : 'codes.txt',
     'SETUP'     : 'setup.txt'
 }
 
@@ -122,14 +123,15 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             else                                            : total_elo += m.elo
 
         members.sort(key = lambda x: x.elo, reverse = True)
-        if MODE == 'NFL' and len(members) == 4:
-            members = [members[0], members[3], members[1], members[2]]
+        if MODE == 'NFL' and len(members) == 4: members = [members[0], members[3], members[1], members[2]]
         
-        mem_strings = []
+        mem_strings         = []
+        code_mem_strings    = []
         for m in members:
             s = "@" + m.name
             if MODE != 'NONE' and m.name in captains_map: s += " (C)"
-            mem_strings.append(s)
+            mem_strings         .append(s)
+            code_mem_strings    .append(f"{m.name} ({m.elo:.3f})")
         
         team_name = custom_names.get(t_idx)
         if not team_name:
@@ -142,12 +144,13 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             'id'            : t_idx,
             'name'          : team_name,
             'total_elo'     : total_elo,
-            'members_str'   : ", ".join(mem_strings)
+            'members_str'   : ", "  .join(mem_strings),
+            'code_str'      : " "   .join(code_mem_strings)
         })
 
     avg_elo, spread = get_stats_block(teams_data)
 
-    with open(FILENAMES['OUTPUT'], 'w', encoding='utf-8') as f:
+    with open(FILENAMES['OUTPUT'], 'w', encoding = 'utf-8') as f:
         f.write(f"Mode: {MODE}\n")
         f.write(f"Balanced {num_selected} out of {original_count} players into {num_teams} teams\n")
         f.write(f"Fulfilled {verified_reqs} out of {len(reqs)} request(s)\n")
@@ -188,15 +191,17 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
 
         f.write(f"\n{setup_config['CHALLONGE']}\n")
         f.write(f"{setup_config['LOBBY']}\n")
-        
-        mode_msg = "the tour"
-        if      MODE == 'NFL': mode_msg = "NFL Mode"
-        elif    MODE == 'NBA': mode_msg = "NBA Mode"
-        elif    MODE == 'MLB': mode_msg = "MLB Mode"
-        f.write(f"Good luck and enjoy {mode_msg}!")
+        f.write(f"Good luck and enjoy the tour!")
 
-    for_mode_str = f" for {MODE} Mode" if MODE != 'NONE' else ''
-    print(f"Success! Teams{for_mode_str} written to {FILENAMES['OUTPUT']}")
+    with open(FILENAMES['CODES'], 'w', encoding = 'utf-8') as f:
+        teams_data.sort(key = lambda x: x['total_elo'], reverse = True)
+        for t in teams_data:
+            f.write(f"{t['name']} ({t['total_elo']:.3f}): {t['code_str']}\n")
+        
+        f.write(f"\nAverage: {avg_elo:.3f}\n\n")
+        f.write(f"{setup_config['CHALLONGE']}\n")
+
+    print(f"Success! Teams written to {FILENAMES['OUTPUT']} and Codes written to {FILENAMES['CODES']}")
 
 def main():
     global MODE, TEAM_SIZE
