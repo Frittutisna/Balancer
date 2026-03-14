@@ -105,7 +105,7 @@ def write_output(num_teams, active_players, final_assignments, setup_config):
 
         members.sort(key = lambda x: x.elo, reverse = True)
         if MODE == 'NFL' and len(members) == 4: members = [members[0], members[3], members[1], members[2]]
-        code_mem_strings = [f"{m.name} ({m.elo:.3f})" for m in members]
+        code_mem_strings = [f"{m.name} ({m.elo:.2f})" for m in members]
         team_name = custom_names.get(t_idx)
         if not team_name:
             if      MODE == 'NFL'   : team_name = NFL_NAMES.get(t_idx, f"Team {t_idx}")
@@ -114,14 +114,14 @@ def write_output(num_teams, active_players, final_assignments, setup_config):
             else                    : team_name = f"Team {t_idx}"
         
         if MODE == 'NONE'   : final_line = " ".join(code_mem_strings)
-        else                : final_line = f"{team_name} ({total_elo:.3f}): " + " ".join(code_mem_strings)
+        else                : final_line = f"{team_name} ({total_elo:.2f}): " + " ".join(code_mem_strings)
         teams_data.append({'total_elo': total_elo, 'final_str': final_line})
 
     avg_elo = get_stats_block(teams_data)
 
     with open(FILENAMES['CODES'], 'w', encoding = 'utf-8') as f:
         for t in teams_data: f.write(f"{t['final_str']}\n")
-        f.write(f"\nAverage: {avg_elo:.3f}\n\n")
+        f.write(f"\nAverage: {avg_elo:.2f}\n\n")
         f.write(f"{setup_config['CHALLONGE']}")
 
     print(f"Codes written to {FILENAMES['CODES']}")
@@ -259,6 +259,6 @@ def main():
 
     if final_best_assignments:
         write_output(num_teams, active_players, final_best_assignments, setup_config)
-        print(f"Final Spread: {final_best_spread:.3f}")
+        print(f"Final Spread: {final_best_spread:.2f}")
 
 if __name__ == "__main__": main()
