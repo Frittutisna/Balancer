@@ -11,7 +11,6 @@ FILENAMES       = {
     'PLAYERS'   : 'players.txt',
     'REQS'      : 'requests.txt',
     'BL'        : 'blacklists.txt',
-    'OUTPUT'    : 'teams.txt',
     'CODES'     : 'codes.txt',
     'SETUP'     : 'setup.txt'
 }
@@ -85,28 +84,9 @@ def get_stats_block(teams_data):
     if not teams_data: return 0.0, 0.0
     scores  = [t['total_elo'] for t in teams_data]
     avg_elo = sum(scores) / len(scores)
-    spread  = max(scores) - min(scores)
-    return avg_elo, spread
+    return avg_elo
 
-def write_output(num_selected, original_count, num_teams, active_players, final_assignments, reqs, bl, setup_config):
-    verified_reqs = 0
-    for r in reqs:
-        p1 = next((p for p in active_players if p.name == r['p1']), None)
-        p2 = next((p for p in active_players if p.name == r['p2']), None)
-        if p1 and p2:
-            idx1 = active_players.index(p1)
-            idx2 = active_players.index(p2)
-            if final_assignments[idx1] == final_assignments[idx2]: verified_reqs += 1
-
-    verified_bl = 0
-    for b in bl:
-        p1 = next((p for p in active_players if p.name == b['p1']), None)
-        p2 = next((p for p in active_players if p.name == b['p2']), None)
-        if p1 and p2:
-            idx1 = active_players.index(p1)
-            idx2 = active_players.index(p2)
-            if final_assignments[idx1] != final_assignments[idx2]: verified_bl += 1
-
+def write_output(num_teams, active_players, final_assignments, setup_config):
     captains_map = {active_players[i].name: True for i in range(num_teams)}
 
     teams_data      = []
@@ -125,13 +105,8 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
         members.sort(key = lambda x: x.elo, reverse = True)
         if MODE == 'NFL' and len(members) == 4: members = [members[0], members[3], members[1], members[2]]
         
-        mem_strings         = []
-        code_mem_strings    = []
-        for m in members:
-            s = "@" + m.name
-            if MODE != 'NONE' and m.name in captains_map: s += " (C)"
-            mem_strings         .append(s)
-            code_mem_strings    .append(f"{m.name} ({m.elo:.3f})")
+        code_mem_strings = []
+        for m in members: code_mem_strings.append(f"{m.name} ({m.elo:.3f})")
         
         team_name = custom_names.get(t_idx)
         if not team_name:
@@ -144,64 +119,18 @@ def write_output(num_selected, original_count, num_teams, active_players, final_
             'id'            : t_idx,
             'name'          : team_name,
             'total_elo'     : total_elo,
-            'members_str'   : ", "  .join(mem_strings),
-            'code_str'      : " "   .join(code_mem_strings)
+            'code_str'      : " ".join(code_mem_strings)
         })
 
-    avg_elo, spread = get_stats_block(teams_data)
-
-    with open(FILENAMES['OUTPUT'], 'w', encoding = 'utf-8') as f:
-        f.write(f"Mode: {MODE}\n")
-        f.write(f"Balanced {num_selected} out of {original_count} players into {num_teams} teams\n")
-        f.write(f"Fulfilled {verified_reqs} out of {len(reqs)} request(s)\n")
-        f.write(f"Fulfilled {verified_bl} out of {len(bl)} blacklist(s)\n")
-        f.write(f"Average Total Elo: {avg_elo:.2f}\n")
-        f.write(f"Final Spread: {spread:.2f}\n\n")
-
-        if num_teams == 8 and MODE != 'NONE':
-            if      MODE == 'NFL'   : conf1_name, conf2_name = "AFC",       "NFC"
-            elif    MODE == 'NBA'   : conf1_name, conf2_name = "Western",   "Eastern"
-            else                    : conf1_name, conf2_name = "AL",        "NL"
-
-            t1_slice = teams_data[0 : 4]
-            t2_slice = teams_data[4 : 8]
-            
-            t1_slice.sort(key = lambda x: x['total_elo'], reverse = True)
-            t2_slice.sort(key = lambda x: x['total_elo'], reverse = True)
-
-            f.write(f"{conf1_name}:\n")
-            avg1, spread1 = get_stats_block(t1_slice)
-            f.write(f"Average Total Elo: {avg1:.2f}\n")
-            f.write(f"Conference Spread: {spread1:.2f}\n")
-            for t in t1_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
-            
-            f.write(f"\n{conf2_name}:\n")
-            avg2, spread2 = get_stats_block(t2_slice)
-            f.write(f"Average Total Elo: {avg2:.2f}\n")
-            f.write(f"Conference Spread: {spread2:.2f}\n")
-            for t in t2_slice   : f.write(f"{t['name']} ({t['total_elo']:.2f}): {t['members_str']}\n")
-        else: 
-            teams_data.sort(key = lambda x: x['total_elo'], reverse = True)
-            for t in teams_data:
-                elo_str = f"{t['total_elo']:.2f}"
-                if num_teams == 2:
-                    if      t['id'] == 1: elo_str += ", Slots 1-4"
-                    elif    t['id'] == 2: elo_str += ", Slots 5-8"
-                f.write(f"{t['name']} ({elo_str}): {t['members_str']}\n")
-
-        f.write(f"\n{setup_config['CHALLONGE']}\n")
-        f.write(f"{setup_config['LOBBY']}\n")
-        f.write(f"Good luck and enjoy the tour!")
+    avg_elo = get_stats_block(teams_data)
 
     with open(FILENAMES['CODES'], 'w', encoding = 'utf-8') as f:
         teams_data.sort(key = lambda x: x['total_elo'], reverse = True)
-        for t in teams_data:
-            f.write(f"{t['name']} ({t['total_elo']:.3f}): {t['code_str']}\n")
-        
+        for t in teams_data: f.write(f"{t['name']} ({t['total_elo']:.3f}): {t['code_str']}\n")
         f.write(f"\nAverage: {avg_elo:.3f}\n\n")
         f.write(f"{setup_config['CHALLONGE']}\n")
 
-    print(f"Success! Teams written to {FILENAMES['OUTPUT']} and Codes written to {FILENAMES['CODES']}")
+    print(f"Success! Codes written to {FILENAMES['CODES']}")
 
 def main():
     global MODE, TEAM_SIZE
@@ -334,6 +263,6 @@ def main():
         print("Could not generate valid teams, check constraints")
         return
     
-    write_output(num_selected, original_count, num_teams, active_players, best_assignments, reqs, bl, setup_config)
+    write_output(num_teams, active_players, best_assignments, setup_config)
 
 if __name__ == "__main__": main()

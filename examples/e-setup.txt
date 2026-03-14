@@ -1,4 +1,4 @@
 Mode: NBA
 Size: 4
-Challonge: https://challonge.com/mlb260315
+Challonge: https://challonge.com/nba260315
 Lobby: https://animemusicquiz.com/invite?roomId=999&password=100
